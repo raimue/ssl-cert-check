@@ -1,0 +1,11 @@
+#!/bin/bash
+
+DAYS=30
+
+for file in "$@"; do
+    openssl x509 -checkend $(( 86400 * $DAYS )) -in "$file" > /dev/null
+    if [ $? != 0 ]; then
+        echo "==> Certificate $file is about to expire soon:"
+        openssl x509 -enddate -in "$file" -noout
+    fi
+done
