@@ -1,11 +1,161 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# vim: set fenc=utf-8:
 
-DAYS=30
+# Copyright (c) 2013, Rainer Müller <raimue@codingfarm.de>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-for file in "$@"; do
-    openssl x509 -checkend $(( 86400 * $DAYS )) -in "$file" > /dev/null
-    if [ $? != 0 ]; then
-        echo "==> Certificate $file is about to expire soon:"
-        openssl x509 -enddate -in "$file" -noout
+# Version 2013-03-07
+# http://raim.codingfarm.de/blog/2013/03/07/checking-expiry-dates-of-local-and-remote-ssl-certificates/
+
+#### Usage ####
+#
+# ./ssl-cert-check <days> <certspec1,certspec2,...>
+#
+# This tool will warn you if any of the specified certificates expires in the
+# next <days> days.
+#
+# The first parameter is the number of days to warn in advance for expiring
+# certificates. All following parameters are treated as certificate
+# specifications and can be in one of the following formats:
+#
+#     - An absolute path to a x509 PEM certificate file
+#       For example:
+#         /etc/apache2/ssl/example.org.pem
+#
+#     - A file://<path> URI
+#       For example:
+#         file:///etc/apache2/ssl/example.org.pem
+#
+#     - A ssl://<host>:<port> URI
+#       For example:
+#         ssl://example.org:443
+#
+#     - A <proto>://<host>[:<port>] URI, this is the same as ssl://<host>:<proto>.
+#       The real port number is usually looked up in /etc/services, note that
+#       you often need the one with the 's' suffix, like "https", "imaps", etc.
+#       For example:
+#         https://example.org
+#         imaps://example.org    (same as ssl://example.org:993)
+#
+#     - A <proto>+starttls://<host>[:<port>] URI
+#       Use the STARTTLS command to start a in-protocol TLS session after
+#       opening an unencrypted connection. The openssl s_client needs to
+#       support this protocol. At time of this writing, the supported protocols
+#       are "smtp", "pop3", "imap", "ftp" and "xmpp".
+#       For example:
+#         imap+starttls://example.org
+#         smtp+starttls://example.org:587
+#
+# Example for your crontab:
+#   MAILTO=root
+#   6       6    * * *   nobody /usr/local/bin/ssl-cert-check 30 /etc/apache2/ssl/*.crt /etc/ssl/certs/dovecot.pem https://localhost ssl://localhost:465 smtp+startssl://localhost:587
+#
+#### #### ####
+
+# First parameter specifies if certificate expire in the next X days
+DAYS=$1
+shift
+
+if [[ ! $DAYS =~ ^[0-9]+$ ]]; then
+    echo "Error: missing parameter <days> or invalid number" >&2
+    exit 3
+fi
+
+if [ $BASH_VERSINFO -lt 4 ]; then
+    echo "Error: this script requires bash >= 4.0" >&2
+    exit 3
+fi
+
+# We need extended globbing
+shopt -s extglob
+
+exitcode=0
+
+for cert in "$@"; do
+    enddate=""
+
+    # For ease of use, map any absolute path name to a file:// URL
+    if [[ $cert =~ ^/(.*)$ ]]; then
+        cert=file://$cert
+    fi
+
+    # Split URI into protocol and target
+    if [[ $cert =~ ^(.*)://(.*)$ ]]; then
+        proto=${BASH_REMATCH[1]}
+        target=${BASH_REMATCH[2]}
+    else
+        echo "Error: invalid certificate specification: $cert" >&2
+        if [ $exitcode -lt 2 ]; then
+            exitcode=2
+        fi
+        continue
+    fi
+
+    port=""
+    extra=""
+    case $proto in
+        file)
+            enddate=$(openssl x509 -checkend $(( 86400 * $DAYS )) -enddate -in "$target")
+            ;;
+        !(ssl))
+            # Handle special protocol definition for STARTTLS
+            if [[ $proto =~ ^(.*)\+starttls$ ]]; then
+                proto=${BASH_REMATCH[1]}
+                extra="-starttls $proto"
+            fi
+
+            # If no port was given, use the default for this protocol
+            if [[ ! $target =~ :[0-9]+$ ]]; then
+                target+=:$proto
+            fi
+
+            # (intentional fallthrough)
+            ;&
+        ssl)
+            # Retrieve certificate
+            certificate=$(echo | openssl s_client -connect "$target" $extra 2>/dev/null \
+                | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+                    -e '/-----END CERTIFICATE-----/q')
+            if [ "$certificate" == "" ]; then
+                echo "Error: unable to check $cert" >&2
+                if [ $exitcode -lt 2 ]; then
+                    exitcode=2
+                fi
+                continue
+            else
+                # Extract notAfter date of validity
+                enddate=$(echo "$certificate" | openssl x509 -checkend $(( 86400 * $DAYS )) -enddate)
+            fi
+            ;;
+    esac
+
+    if [[ $enddate =~ (.*)Certificate\ will\ expire ]]; then
+        echo    "==> Certificate $cert is about to expire soon:"
+        echo -n "    ${BASH_REMATCH[1]}"
+        if [ $exitcode -lt 1 ]; then
+            exitcode=1
+        fi
     fi
 done
+
+exit $exitcode
