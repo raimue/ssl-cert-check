@@ -125,8 +125,11 @@ for cert in "$@"; do
             fi
 
             # If no port was given, use the default for this protocol
+            servername=$target
             if [[ ! $target =~ :[0-9]+$ ]]; then
                 target+=:$proto
+            else
+                servername=${target%:*}
             fi
 
             # (intentional fallthrough)
@@ -144,7 +147,7 @@ for cert in "$@"; do
             fi
             # Delete temporary file if shell exits during certificate check
             trap "rm -f $tempfile" EXIT
-            cmd=(openssl s_client -connect "$target" $extra)
+            cmd=(openssl s_client -connect "$target" -servername "$servername" $extra)
             certificate=$(echo | ${cmd[@]} 2>$tempfile \
                 | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
                     -e '/-----END CERTIFICATE-----/q')
