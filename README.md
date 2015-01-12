@@ -1,9 +1,13 @@
 # ssl-cert-check
 
- ./ssl-cert-check \<days> \<certspec1,certspec2,...>
+Usage:
+
+ - `./ssl-cert-check <days> <certspec1,certspec2,...>`
+ - `./ssl-cert-check <days> --list=<FILE>`
 
 This tool will warn you if any of the specified certificates expires in the
-next \<days> days.
+next \<days> days. If the --list syntax is used, the file is expected to
+contain one certspec per line.
 
 ## Parameters
 
