@@ -2,6 +2,7 @@
 # vim: set fenc=utf-8:
 
 # Copyright (c) 2013-2014, Rainer Müller <raimue@codingfarm.de>
+# Copyright (c) 2015, Daniel Danner <daniel@danner.de>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -28,6 +29,11 @@
 # https://raim.codingfarm.de/blog/tag/ssl-cert-check/
 # https://github.com/raimue/ssl-cert-check
 
+if [ $BASH_VERSINFO -lt 4 ]; then
+    echo "Error: this script requires bash >= 4.0" >&2
+    exit 3
+fi
+
 # First parameter specifies if certificate expire in the next X days
 DAYS=$1
 shift
@@ -37,9 +43,14 @@ if [[ ! $DAYS =~ ^[0-9]+$ ]]; then
     exit 3
 fi
 
-if [ $BASH_VERSINFO -lt 4 ]; then
-    echo "Error: this script requires bash >= 4.0" >&2
-    exit 3
+if [[ "$1" == --list=* ]]; then
+    LIST=${1##--list=}
+    if [[ ! -r "$LIST" ]]; then
+        echo "Error: list is not a regular file" >&2
+    fi
+    readarray -t TARGETS < "$LIST"
+else
+    TARGETS=("$@")
 fi
 
 # We need extended globbing
@@ -47,7 +58,7 @@ shopt -s extglob
 
 exitcode=0
 
-for cert in "$@"; do
+for cert in "${TARGETS[@]}"; do
     enddate=""
 
     # For ease of use, map any absolute path name to a file:// URL
@@ -104,7 +115,7 @@ for cert in "$@"; do
             # Delete temporary file if shell exits during certificate check
             trap "rm -f $tempfile" EXIT
             cmd=(openssl s_client -connect "$target" -servername "$servername" $extra)
-            certificate=$(echo | ${cmd[@]} 2>$tempfile \
+            certificate=$(echo | "${cmd[@]}" 2>$tempfile \
                 | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
                     -e '/-----END CERTIFICATE-----/q')
             if [ "$certificate" == "" ]; then
