@@ -104,7 +104,7 @@ for cert in "$@"; do
             # Delete temporary file if shell exits during certificate check
             trap "rm -f $tempfile" EXIT
             cmd=(openssl s_client -connect "$target" -servername "$servername" $extra)
-            certificate=$(echo | ${cmd[@]} 2>$tempfile \
+            certificate=$(echo | "${cmd[@]}" 2>$tempfile \
                 | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
                     -e '/-----END CERTIFICATE-----/q')
             if [ "$certificate" == "" ]; then
