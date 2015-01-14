@@ -92,16 +92,16 @@ for cert in "${TARGETS[@]}"; do
             fi
 
             # If no port was given, use the default for this protocol
-            servername=$target
             if [[ ! $target =~ :[0-9]+$ ]]; then
                 target+=:$proto
-            else
-                servername=${target%:*}
             fi
 
             # (intentional fallthrough)
             ;&
         ssl)
+            # Extract servername for SNI
+            servername=${target%:*}
+
             # Retrieve certificate
             # Create new temporary file
             tempfile=$(mktemp -t ssl-cert-check.XXXXX)
