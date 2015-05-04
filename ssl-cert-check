@@ -112,7 +112,7 @@ for cert in "${TARGETS[@]}"; do
                 continue
             fi
             # Delete temporary file if shell exits during certificate check
-            trap "rm -f $tempfile" EXIT
+            trap "rm -f \"$tempfile\"" EXIT
             cmd=(openssl s_client -connect "$target" -servername "$servername" $extra)
             certificate=$(echo | "${cmd[@]}" 2>"$tempfile" \
                 | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
