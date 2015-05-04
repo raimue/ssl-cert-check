@@ -119,7 +119,7 @@ for cert in "${TARGETS[@]}"; do
                     -e '/-----END CERTIFICATE-----/q')
             if [ "$certificate" == "" ]; then
                 echo "Error: unable to check $cert" >&2
-                echo "Error: command was '${cmd[@]}', openssl error messages were:" >&2
+                echo "Error: command was '${cmd[*]}', openssl error messages were:" >&2
                 sed 's/^/    /' $tempfile >&2
                 if [ $exitcode -lt 2 ]; then
                     exitcode=2
