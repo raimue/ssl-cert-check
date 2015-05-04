@@ -78,7 +78,6 @@ for cert in "${TARGETS[@]}"; do
         continue
     fi
 
-    port=""
     extra=""
     case $proto in
         file)
