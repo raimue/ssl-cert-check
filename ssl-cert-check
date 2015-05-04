@@ -114,13 +114,13 @@ for cert in "${TARGETS[@]}"; do
             # Delete temporary file if shell exits during certificate check
             trap "rm -f $tempfile" EXIT
             cmd=(openssl s_client -connect "$target" -servername "$servername" $extra)
-            certificate=$(echo | "${cmd[@]}" 2>$tempfile \
+            certificate=$(echo | "${cmd[@]}" 2>"$tempfile" \
                 | sed -n -e '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
                     -e '/-----END CERTIFICATE-----/q')
             if [ "$certificate" == "" ]; then
                 echo "Error: unable to check $cert" >&2
                 echo "Error: command was '${cmd[*]}', openssl error messages were:" >&2
-                sed 's/^/    /' $tempfile >&2
+                sed 's/^/    /' "$tempfile" >&2
                 if [ $exitcode -lt 2 ]; then
                     exitcode=2
                 fi
@@ -129,7 +129,7 @@ for cert in "${TARGETS[@]}"; do
                 # Extract notAfter date of validity
                 enddate=$(echo "$certificate" | openssl x509 -checkend $(( 86400 * DAYS )) -enddate)
             fi
-            rm -f $tempfile
+            rm -f "$tempfile"
             ;;
     esac
 
