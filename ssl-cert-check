@@ -81,7 +81,7 @@ for cert in "${TARGETS[@]}"; do
     extra=""
     case $proto in
         file)
-            enddate=$(openssl x509 -checkend $(( 86400 * $DAYS )) -enddate -in "$target")
+            enddate=$(openssl x509 -checkend $(( 86400 * DAYS )) -enddate -in "$target")
             ;;
         !(ssl))
             # Handle special protocol definition for STARTTLS
@@ -127,7 +127,7 @@ for cert in "${TARGETS[@]}"; do
                 continue
             else
                 # Extract notAfter date of validity
-                enddate=$(echo "$certificate" | openssl x509 -checkend $(( 86400 * $DAYS )) -enddate)
+                enddate=$(echo "$certificate" | openssl x509 -checkend $(( 86400 * DAYS )) -enddate)
             fi
             rm -f $tempfile
             ;;
