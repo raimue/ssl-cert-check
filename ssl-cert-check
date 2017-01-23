@@ -48,7 +48,7 @@ if [[ "$1" == --list=* ]]; then
     if [[ ! -r "$LIST" ]]; then
         echo "Error: list is not a regular file" >&2
     fi
-    readarray -t TARGETS < "$LIST"
+    readarray -t TARGETS < <(grep -v '^#' "$LIST")
 else
     TARGETS=("$@")
 fi
