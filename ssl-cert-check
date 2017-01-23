@@ -43,18 +43,21 @@ if [[ ! $DAYS =~ ^[0-9]+$ ]]; then
     exit 3
 fi
 
-if [[ "$1" == --list=* ]]; then
-    LIST=${1##--list=}
+# We need extended globbing
+shopt -s extglob
+
+if [[ "$1" =~ ^--(list|glob)=.* ]]; then
+    LIST=${1##--@(list|glob)=}
     if [[ ! -r "$LIST" ]]; then
         echo "Error: list is not a regular file" >&2
     fi
     readarray -t TARGETS < <(grep -v '^#' "$LIST")
+    if [[ "$1" =~ ^--glob=.* ]]; then
+        TARGETS=( ${TARGETS[@]} )
+    fi
 else
     TARGETS=("$@")
 fi
-
-# We need extended globbing
-shopt -s extglob
 
 exitcode=0
 
