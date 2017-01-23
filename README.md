@@ -4,10 +4,12 @@ Usage:
 
  - `./ssl-cert-check <days> <certspec1,certspec2,...>`
  - `./ssl-cert-check <days> --list=<FILE>`
+ - `./ssl-cert-check <days> --glob=<FILE>`
 
 This tool will warn you if any of the specified certificates expires in the
-next \<days> days. If the --list syntax is used, the file is expected to
-contain one certspec per line.
+next \<days> days. If the --list mode is used, the file is expected to
+contain one certspec per line. Similarly, --glob mode expects one certspec per
+line, but it will be evaluated as a wildcard glob pattern.
 
 ## Parameters
 
