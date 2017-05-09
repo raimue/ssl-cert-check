@@ -10,7 +10,8 @@ This tool will warn you if any of the specified certificates expires in the
 next \<days> days. If the --list mode is used, the file is expected to contain
 one certspec per line. Similarly, --glob mode expects one certspec per line in
 the given file, but each line will be evaluated as a wildcard glob pattern. In
-both cases, lines starting with the character '#' will be ignored.
+both cases, lines starting with the character '#' as well as empty lines will
+be ignored.
 
 ## Parameters
 

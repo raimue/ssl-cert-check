@@ -3,6 +3,7 @@
 
 # Copyright (c) 2013-2017, Rainer Müller <raimue@codingfarm.de>
 # Copyright (c) 2015, Daniel Danner <daniel@danner.de>
+# Copyright (c) 2017, Mateusz Adamowski <mateusz@adamowski.pl>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,7 +52,7 @@ if [[ "$1" =~ ^--(list|glob)=.* ]]; then
     if [[ ! -r "$LIST" ]]; then
         echo "Error: list is not a regular file" >&2
     fi
-    readarray -t TARGETS < <(grep -v '^#' "$LIST")
+    readarray -t TARGETS < <(grep -v '\(^#\|^\s*$\)' "$LIST")
     if [[ "$1" =~ ^--glob=.* ]]; then
         TARGETS=( ${TARGETS[@]} )
     fi
